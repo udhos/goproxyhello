@@ -98,7 +98,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
 	copyHeader("orig-to-forward", "Authorization", req.Header, r.Header)
 
-	showHeader("forward request", r.Header)
+	showHeader("forward request", req.Header)
 
 	tls := strings.HasPrefix(target, "https://")
 
