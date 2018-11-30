@@ -19,4 +19,14 @@ If you want to use HTTPS, you will need a certificate:
 
 Run:
 
-    goproxyhello
+    goproxyhello -target http://remote_host:remote_port
+
+Example:
+
+    $ goproxyhello -target http://localhost:8000
+    2018/11/30 17:22:05 version=0.0 runtime=go1.11.2 GOMAXPROCS=1
+    2018/11/30 17:22:05 keepalive: true
+    2018/11/30 17:22:05 TLS key file not found: key.pem - disabling TLS
+    2018/11/30 17:22:05 TLS cert file not found: cert.pem - disabling TLS
+    2018/11/30 17:22:05 forwarding HTTP from TCP :8080 to http://localhost:8000
+
