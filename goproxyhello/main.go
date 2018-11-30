@@ -32,8 +32,14 @@ func main() {
 	flag.BoolVar(&disableKeepalive, "disableKeepalive", false, "disable keepalive")
 	flag.Parse()
 
-	keepalive := !disableKeepalive
+	hostname, errHost := os.Hostname()
+	if errHost != nil {
+		hostname = "unknown-host"
+		log.Printf("failure finding hostname: %v", errHost)
+	}
+	log.Printf("hostname: %s", hostname)
 
+	keepalive := !disableKeepalive
 	log.Print("keepalive: ", keepalive)
 
 	if !fileExists(key) {
@@ -46,7 +52,7 @@ func main() {
 		tls = false
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, keepalive, target) })
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, keepalive, target, hostname) })
 
 	if tls {
 		log.Printf("forwarding HTTPS from TCP %s to %s", listen, target)
@@ -78,10 +84,19 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target string) {
+func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target, hostname string) {
 	log.Printf("%s host=%s path=%s query=%s from=%s to=%s", r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 
 	showHeader("original request", r.Header)
+
+	via := "1.1 " + hostname
+
+	foundVia := findHeader(r.Header, "Via", via)
+	if foundVia {
+		log.Printf("request loop found: %s: %s", "Via", via)
+		http.Error(w, "loop detected from via header", http.StatusLoopDetected)
+		return
+	}
 
 	log.Printf("trying: %s %s %s %s", r.Method, target, r.URL.Path, r.URL.RawQuery)
 
@@ -95,8 +110,13 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 		http.Error(w, errReq.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
 	copyHeader("orig-to-forward", "Authorization", req.Header, r.Header)
+	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
+
+	if !foundVia {
+		log.Printf("setting header: %s: %s", "Via", via)
+		req.Header.Add("Via", via)
+	}
 
 	showHeader("forward request", req.Header)
 
@@ -121,6 +141,22 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 	io.Copy(w, resp.Body) // copy body
 
 	resp.Body.Close()
+}
+
+func findHeader(h http.Header, key, value string) bool {
+	lowK := strings.ToLower(key)
+	lowV := strings.ToLower(value)
+	for k, vv := range h {
+		if lowK != strings.ToLower(k) {
+			continue
+		}
+		for _, v := range vv {
+			if lowV == strings.ToLower(v) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func showHeader(label string, src http.Header) {
