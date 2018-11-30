@@ -85,7 +85,7 @@ func fileExists(path string) bool {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target, hostname string) {
-	log.Printf("%s host=%s path=%s query=%s from=%s to=%s", r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
+	log.Printf("TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 
 	showHeader("original request", r.Header)
 
@@ -98,11 +98,13 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target,
 		return
 	}
 
-	log.Printf("trying: %s %s %s %s", r.Method, target, r.URL.Path, r.URL.RawQuery)
+	tls := strings.HasPrefix(target, "https://")
+
+	log.Printf("trying: TLS=%v %s %s %s %s", tls, r.Method, target, r.URL.Path, r.URL.RawQuery)
 
 	u := target + r.URL.Path + "?" + r.URL.RawQuery
 
-	log.Printf("trying: %s", u)
+	log.Printf("trying: TLS=%v %s", tls, u)
 
 	req, errReq := http.NewRequest(r.Method, u, r.Body)
 	if errReq != nil {
@@ -119,8 +121,6 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target,
 	}
 
 	showHeader("forward request", req.Header)
-
-	tls := strings.HasPrefix(target, "https://")
 
 	c := httpClient(tls)
 
