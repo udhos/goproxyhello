@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	//"fmt"
+	"crypto/tls"
 	"io"
 	"log"
 	"net/http"
@@ -94,9 +95,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 		http.Error(w, errReq.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	//req.Header.Set("Content-Type", req.Header.Get("Content-Type"))
-	copyHeader("Content-Type", req.Header, r.Header)
-	copyHeader("Authorization", req.Header, r.Header)
+	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
+	copyHeader("orig-to-forward", "Authorization", req.Header, r.Header)
 
 	showHeader("forward request", r.Header)
 
@@ -115,7 +115,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 
 	copyHeaderAll(w.Header(), resp.Header) // copy headers
 
-	log.Printf("status: %d", resp.StatusCode)
+	log.Printf("response status: %d", resp.StatusCode)
 	w.WriteHeader(resp.StatusCode) // copy status
 
 	io.Copy(w, resp.Body) // copy body
@@ -126,18 +126,19 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target 
 func showHeader(label string, src http.Header) {
 	for k, vv := range src {
 		for _, v := range vv {
-			log.Printf("%s: %s: %s", label, k, v)
+			log.Printf("%s: header: %s: %s", label, k, v)
 		}
 	}
 }
 
-func copyHeader(key string, dst, src http.Header) {
+func copyHeader(label, key string, dst, src http.Header) {
 	kk := strings.ToLower(key)
 	for k, vv := range src {
 		if kk != strings.ToLower(k) {
 			continue
 		}
 		for _, v := range vv {
+			log.Printf("%s: copy header: %s: %s", label, k, v)
 			dst.Add(k, v)
 		}
 	}
@@ -148,5 +149,40 @@ func copyHeaderAll(dst, src http.Header) {
 		for _, v := range vv {
 			dst.Add(k, v)
 		}
+	}
+}
+
+func tlsConfig() *tls.Config {
+	return &tls.Config{
+		//CipherSuites:             []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA},
+		PreferServerCipherSuites: true,
+		InsecureSkipVerify:       true,
+		//MaxVersion:               tls.VersionTLS11,
+		//MinVersion:               tls.VersionTLS11,
+	}
+}
+
+func httpClient(tls bool) *http.Client {
+	/*
+		tr := &http.Transport{
+			//TLSClientConfig:    tlsConfig(),
+			DisableCompression: true,
+			DisableKeepAlives:  true,
+			Dial: (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 10 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}
+	*/
+	tr := &http.Transport{}
+	if tls {
+		tr.TLSClientConfig = tlsConfig()
+	}
+	return &http.Client{
+		Transport: tr,
+		//Timeout:   15 * time.Second,
 	}
 }
