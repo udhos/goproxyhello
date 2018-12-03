@@ -149,7 +149,9 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
 	log.Printf("response status: %d", resp.StatusCode)
 	w.WriteHeader(resp.StatusCode) // copy status
 
-	io.Copy(w, resp.Body) // copy body
+	n, errCopy := io.Copy(w, resp.Body) // copy body
+
+	log.Printf("response body: size=%d error: %v", n, errCopy)
 
 	resp.Body.Close()
 }
