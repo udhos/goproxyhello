@@ -23,13 +23,14 @@ func main() {
 	log.Printf("version=%s runtime=%s GOMAXPROCS=%d", helloVersion, runtime.Version(), runtime.GOMAXPROCS(0))
 
 	var target, listen, key, cert string
-	var disableKeepalive bool
+	var disableKeepalive, disableTLS bool
 
 	flag.StringVar(&key, "key", "key.pem", "TLS key file")
 	flag.StringVar(&cert, "cert", "cert.pem", "TLS cert file")
 	flag.StringVar(&listen, "listen", ":8080", "listen address")
 	flag.StringVar(&target, "target", "http://localhost", "target address")
-	flag.BoolVar(&disableKeepalive, "disableKeepalive", false, "disable keepalive")
+	flag.BoolVar(&disableKeepalive, "disableKeepalive", false, "disable keepalive, only on listener")
+	flag.BoolVar(&disableTLS, "disableTLS", false, "disable TLS")
 	flag.Parse()
 
 	hostname, errHost := os.Hostname()
@@ -42,17 +43,21 @@ func main() {
 	keepalive := !disableKeepalive
 	log.Print("keepalive: ", keepalive)
 
-	if !fileExists(key) {
-		log.Printf("TLS key file not found: %s - disabling TLS", key)
+	if disableTLS {
+		log.Printf("disabling TLS from command-line switch: -disableTLS")
 		tls = false
+	} else {
+		if !fileExists(key) {
+			log.Printf("TLS key file not found: %s - disabling TLS", key)
+			tls = false
+		}
+		if !fileExists(cert) {
+			log.Printf("TLS cert file not found: %s - disabling TLS", cert)
+			tls = false
+		}
 	}
 
-	if !fileExists(cert) {
-		log.Printf("TLS cert file not found: %s - disabling TLS", cert)
-		tls = false
-	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, keepalive, target, hostname) })
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname) })
 
 	if tls {
 		log.Printf("forwarding HTTPS from TCP %s to %s", listen, target)
@@ -85,8 +90,13 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target, hostname string) {
-	log.Printf("TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
+func rootHandler(w http.ResponseWriter, r *http.Request, target, hostname string) {
+	log.Printf("BEGIN TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
+	work(w, r, target, hostname)
+	log.Printf("END   TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
+}
+
+func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
 
 	showHeader("original request", r.Header)
 
@@ -99,7 +109,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request, keepalive bool, target,
 		return
 	}
 
-	tls := strings.HasPrefix(target, "https://")
+	tls := strings.HasPrefix(strings.ToLower(target), "https://")
 
 	log.Printf("trying: TLS=%v %s %s %s %s", tls, r.Method, target, r.URL.Path, r.URL.RawQuery)
 
