@@ -96,6 +96,20 @@ func rootHandler(w http.ResponseWriter, r *http.Request, target, hostname string
 	log.Printf("END   TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 }
 
+type readAccount struct {
+	reader io.Reader
+	size   int64
+	err    error
+}
+
+func (r *readAccount) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	//log.Printf("read: %d %v", n, err)
+	r.size += int64(n)
+	r.err = err
+	return
+}
+
 func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
 
 	showHeader("original request", r.Header)
@@ -117,12 +131,17 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
 
 	log.Printf("trying: TLS=%v %s", tls, u)
 
-	req, errReq := http.NewRequest(r.Method, u, r.Body)
+	bodyReader := &readAccount{reader: r.Body}
+
+	req, errReq := http.NewRequest(r.Method, u, bodyReader)
 	if errReq != nil {
 		log.Printf("request error: %v", errReq)
 		http.Error(w, errReq.Error(), http.StatusServiceUnavailable)
 		return
 	}
+
+	log.Printf("request body: size=%d error: %v", bodyReader.size, bodyReader.err)
+
 	copyHeader("orig-to-forward", "Authorization", req.Header, r.Header)
 	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
 
