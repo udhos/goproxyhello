@@ -59,6 +59,7 @@ func main() {
 		if err := listenAndServeTLS(listen, cert, key, nil, keepalive); err != nil {
 			log.Fatalf("listenAndServeTLS: %s: %v", listen, err)
 		}
+		return
 	}
 
 	log.Printf("forwarding HTTP from TCP %s to %s", listen, target)
