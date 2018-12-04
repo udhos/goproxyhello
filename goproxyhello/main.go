@@ -145,7 +145,7 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string, heade
 		return
 	}
 
-	log.Printf("request body: size=%d error: %v", bodyReader.size, bodyReader.err)
+	log.Printf("%s request body: size=%d error: %v", r.Method, bodyReader.size, bodyReader.err)
 
 	copyHeader("orig-to-forward", headers, req.Header, r.Header)
 
