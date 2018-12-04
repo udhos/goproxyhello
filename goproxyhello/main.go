@@ -57,12 +57,12 @@ func main() {
 		}
 	}
 
+	headerList := []string{"authorization", "content-type", "content-length", "accept", "expect"}
+	log.Printf("will forward headers: %v", headerList)
 	headers := map[string]struct{}{}
-	setKey(headers, "authorization")
-	setKey(headers, "content-type")
-	setKey(headers, "content-length")
-	setKey(headers, "accept")
-	setKey(headers, "expect")
+	for _, k := range headerList {
+		setKey(headers, k)
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname, headers) })
 
