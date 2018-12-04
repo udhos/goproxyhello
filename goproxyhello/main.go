@@ -148,8 +148,6 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string, heade
 
 	log.Printf("request: TLS=%v %s %s %s %s %s", tls, req.Method, req.URL.Scheme, req.Host, req.URL.Path, req.URL.RawQuery)
 
-	log.Printf("%s request body: size=%d error: %v", r.Method, bodyReader.size, bodyReader.err)
-
 	copyHeader("orig-to-forward", headers, req.Header, r.Header)
 
 	if !foundVia {
@@ -167,6 +165,9 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string, heade
 		http.Error(w, errDo.Error(), http.StatusServiceUnavailable)
 		return
 	}
+
+	// body is sent within client.Do(request)
+	log.Printf("%s request body sent: size=%d error: %v", r.Method, bodyReader.size, bodyReader.err)
 
 	showHeader("response", resp.Header)
 
