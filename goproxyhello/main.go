@@ -61,6 +61,7 @@ func main() {
 	headers["authorization"] = struct{}{}
 	headers["content-type"] = struct{}{}
 	headers["accept"] = struct{}{}
+	headers["expect"] = struct{}{}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname, headers) })
 
