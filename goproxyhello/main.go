@@ -58,7 +58,7 @@ func main() {
 	}
 
 	headers := map[string]struct{}{}
-	headers["athorization"] = struct{}{}
+	headers["authorization"] = struct{}{}
 	headers["content-type"] = struct{}{}
 	headers["accept"] = struct{}{}
 
