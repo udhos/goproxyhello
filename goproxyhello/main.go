@@ -145,6 +145,8 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string, heade
 		return
 	}
 
+	log.Printf("request: TLS=%v %s %s %s %s %s", tls, req.Method, req.URL.Scheme, req.Host, req.URL.Path, req.URL.RawQuery)
+
 	log.Printf("%s request body: size=%d error: %v", r.Method, bodyReader.size, bodyReader.err)
 
 	copyHeader("orig-to-forward", headers, req.Header, r.Header)
