@@ -57,7 +57,12 @@ func main() {
 		}
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname) })
+	headers := map[string]struct{}{}
+	headers["athorization"] = struct{}{}
+	headers["content-type"] = struct{}{}
+	headers["accept"] = struct{}{}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname, headers) })
 
 	if tls {
 		log.Printf("forwarding HTTPS from TCP %s to %s", listen, target)
@@ -90,9 +95,9 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request, target, hostname string) {
+func rootHandler(w http.ResponseWriter, r *http.Request, target, hostname string, headers map[string]struct{}) {
 	log.Printf("BEGIN TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
-	work(w, r, target, hostname)
+	work(w, r, target, hostname, headers)
 	log.Printf("END TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 }
 
@@ -110,7 +115,7 @@ func (r *readAccount) Read(p []byte) (n int, err error) {
 	return
 }
 
-func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
+func work(w http.ResponseWriter, r *http.Request, target, hostname string, headers map[string]struct{}) {
 
 	showHeader("original request", r.Header)
 
@@ -142,8 +147,7 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string) {
 
 	log.Printf("request body: size=%d error: %v", bodyReader.size, bodyReader.err)
 
-	copyHeader("orig-to-forward", "Authorization", req.Header, r.Header)
-	copyHeader("orig-to-forward", "Content-Type", req.Header, r.Header)
+	copyHeader("orig-to-forward", headers, req.Header, r.Header)
 
 	if !foundVia {
 		log.Printf("setting header: %s: %s", "Via", via)
@@ -199,10 +203,10 @@ func showHeader(label string, src http.Header) {
 	}
 }
 
-func copyHeader(label, key string, dst, src http.Header) {
-	kk := strings.ToLower(key)
+func copyHeader(label string, keys map[string]struct{}, dst, src http.Header) {
 	for k, vv := range src {
-		if kk != strings.ToLower(k) {
+		lowK := strings.ToLower(k)
+		if _, found := keys[lowK]; !found {
 			continue
 		}
 		for _, v := range vv {
