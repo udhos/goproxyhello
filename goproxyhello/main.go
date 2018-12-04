@@ -93,7 +93,7 @@ func fileExists(path string) bool {
 func rootHandler(w http.ResponseWriter, r *http.Request, target, hostname string) {
 	log.Printf("BEGIN TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 	work(w, r, target, hostname)
-	log.Printf("END   TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
+	log.Printf("END TLS=%v %s host=%s path=%s query=%s from=%s to=%s", r.TLS != nil, r.Method, r.Host, r.URL.Path, r.URL.RawQuery, r.RemoteAddr, target)
 }
 
 type readAccount struct {
