@@ -58,10 +58,11 @@ func main() {
 	}
 
 	headers := map[string]struct{}{}
-	headers["authorization"] = struct{}{}
-	headers["content-type"] = struct{}{}
-	headers["accept"] = struct{}{}
-	headers["expect"] = struct{}{}
+	setKey(headers, "authorization")
+	setKey(headers, "content-type")
+	setKey(headers, "content-length")
+	setKey(headers, "accept")
+	setKey(headers, "expect")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { rootHandler(w, r, target, hostname, headers) })
 
@@ -77,6 +78,10 @@ func main() {
 	if err := listenAndServe(listen, nil, keepalive); err != nil {
 		log.Fatalf("listenAndServe: %s: %v", listen, err)
 	}
+}
+
+func setKey(tab map[string]struct{}, key string) {
+	tab[strings.ToLower(key)] = struct{}{}
 }
 
 func listenAndServe(addr string, handler http.Handler, keepalive bool) error {
