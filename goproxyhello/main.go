@@ -138,7 +138,11 @@ func work(w http.ResponseWriter, r *http.Request, target, hostname string, heade
 
 	log.Printf("trying: TLS=%v %s %s %s %s", tls, r.Method, target, r.URL.Path, r.URL.RawQuery)
 
-	u := target + r.URL.Path + "?" + r.URL.RawQuery
+	u := target + r.URL.Path
+
+	if r.URL.RawQuery != "" {
+		u += "?" + r.URL.RawQuery
+	}
 
 	log.Printf("trying: TLS=%v %s", tls, u)
 
